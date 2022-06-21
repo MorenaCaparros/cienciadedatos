@@ -1,4 +1,3 @@
-from os import curdir
 from tkinter import *
 from tkinter import messagebox
 import sqlite3 as sq3 #importa la base de datos
@@ -16,7 +15,7 @@ raiz.title('Datos - Codo a Codo 2022') #pone tiotulo a la ventana ppal
 
 # MENUBBDD
 def conectar():
-    global con #global para lñlamarlo desde cualquier parte del programa
+    global con #global para llamarlo desde cualquier parte del programa
     global cur
     con = sq3.connect('mi_bbdd.db') #esto es para conectarlo con la bbdd
     cur = con.cursor()
@@ -69,6 +68,75 @@ def licencia():
 def acerca():
     messagebox.showinfo('ACERCA DE...','Creado por Morena Caparrós\npara Codo a Codo 4.0 - Big Data\nMayo, 2022\nEmail: morens217@gmail.com')
 
+# FUNCIONES VARIAS
+#le mando un parametro que si es true va a ser porque va a actualizar la base de datos
+#sino es porque solo em interesan los nombres de las escuelas (cuando esta en false)
+def buscar_escuela(actualiza): 
+    con = sq3.connect('mi_bbdd.db')
+    cur = con.cursor()
+    if actualiza:
+         cur.execute('SELECT _id, localidad, provincia FROM escuelas WHERE nombre = ?',(escuela.get(),))
+         #se manda (escuela.get(),) con esta forma, es decir con la coma porque en resultados trae con , sino te tira error
+         
+    else:
+        cur.execute('SELECT nombre FROM escuelas') #le digo que me seleccione de las escuelas los nombres  
+        escuela.set("Seleccione")
+
+    resultado = cur.fetchall() # RECIBO LISTA DE TUPLAS con un elemento "fantasma" 
+    retorno = []
+    for e in resultado: #cuando yo elijo una escuela, que me llenel los datos prov y localidad con los datos qwue corresponden a esa e, esa escuela
+        if actualiza:
+            provincia.set(e[2])#2 porque esta en la posicion 2 '_id, localidad, provincia(2)' (ver linea 118)
+            localidad.set(e[1])# 1 por la posicion
+        esc = e[0]
+        retorno.append(esc)
+    
+    #print(resultado) #aca manda esto: [('Normal 1',), ('Gral. San Martín',), ('Belgrano',), ('EET Nro 2',), ('Esc. N° 2 Tomás Santa coloma',)][('Normal 1',), ('Gral. San Martín',), ('Belgrano',), ('EET Nro 2',), ('Esc. N° 2 Tomás Santa coloma',)]
+    #sale una coma despues de  lo qeu esta entre '' entonces nada puede tirar error
+    con.close()
+    return retorno
+
+def listar():
+    class Table():
+        def __init__(self,raiz2):
+            nombre_cols = ['Legajo', 'Alumno', 'Calificación', 'Email', 
+            'Escuela', 'Localidad', 'Provincia']
+            for i in range(cant_cols):
+                self.e = Entry(frameppal)
+                self.e.config(bg='goldenrod', fg='lemon chiffon')
+                self.e.grid(row=0, column=i)
+                self.e.insert(END,nombre_cols[i])
+
+            for fila in range(cant_filas):
+                for col in range(cant_cols):
+                    self.e = Entry(frameppal)
+                    self.e.grid(row=fila+1, column=col)
+                    self.e.insert(END, resultado[fila][col])
+                    self.e.config(state='readonly')
+    raiz2 = Tk()
+    raiz2.title('Listado alumnos')
+    frameppal = Frame(raiz2)    
+    frameppal.pack(fill='both')
+    framecerrar = Frame(raiz2)
+    framecerrar.config(bg=color_texto_boton)
+    framecerrar.pack(fill='both')
+
+    boton_cerrar = Button(framecerrar,text="CERRAR", command=raiz2.destroy)
+    boton_cerrar.config(bg=color_fondo_boton, fg=color_texto_boton, pady=10, padx=0)
+    boton_cerrar.pack(fill='both')
+
+    # obtengo los datos -> Messirve el query1 del ejemplo de sqlite
+    con = sq3.connect('mi_bbdd.db')
+    cur = con.cursor()
+    query1 = '''SELECT alumnos.legajo, alumnos.nombre, alumnos.nota, alumnos.email, escuelas.nombre, escuelas.localidad, escuelas.provincia FROM alumnos INNER JOIN escuelas ON alumnos.id_escuela = escuelas._id'''
+    cur.execute(query1)
+    resultado = cur.fetchall()
+    cant_filas = len(resultado) # la cantidad de registros para saber cuántas filas
+    cant_cols = len(resultado[0]) # obtengo la cantidad de columnas
+    
+    tabla = Table(frameppal)
+    con.close()
+    raiz2.mainloop()
 
 # FUNCIONES CRUD (Create - read - Update - Delete)
 # CREATE
@@ -123,33 +191,7 @@ def borrar():
         limpiar()
 
 
-# FUNCIONES VARIAS
-#le mando un parametro que si es true va a ser porque va a actualizar la base de datos
-#sino es porque solo em interesan los nombres de las escuelas (cuando esta en false)
-def buscar_escuela(actualiza): 
-    con = sq3.connect('mi_bbdd.db')
-    cur = con.cursor()
-    if actualiza:
-         cur.execute('SELECT _id, localidad, provincia FROM escuelas WHERE nombre = ?',(escuela.get(),))
-         #se manda (escuela.get(),) con esta forma, es decir con la coma porque en resultados trae con , sino te tira error
-         
-    else:
-        cur.execute('SELECT nombre FROM escuelas') #le digo que me seleccione de las escuelas los nombres  
-        escuela.set("Seleccione")
 
-    resultado = cur.fetchall()
-    retorno = []
-    for e in resultado: #cuando yo elijo una escuela, que me llenel los datos prov y localidad con los datos qwue corresponden a esa e, esa escuela
-        if actualiza:
-            provincia.set(e[2])#2 porque esta en la posicion 2 '_id, localidad, provincia(2)' (ver linea 118)
-            localidad.set(e[1])# 1 por la posicion
-        esc = e[0]
-        retorno.append(esc)
-    
-    #print(resultado) #aca manda esto: [('Normal 1',), ('Gral. San Martín',), ('Belgrano',), ('EET Nro 2',), ('Esc. N° 2 Tomás Santa coloma',)][('Normal 1',), ('Gral. San Martín',), ('Belgrano',), ('EET Nro 2',), ('Esc. N° 2 Tomás Santa coloma',)]
-    #sale una coma despues de  lo qeu esta entre '' entonces nada puede tirar error
-    con.close()
-    return retorno
 
 
 '''
@@ -163,8 +205,18 @@ raiz.config(menu=barramenu) #indica a al ventana ppal que ubique al menu
 
 bbddmenu = Menu(barramenu, tearoff=0) # crea submenu BBDD
 
+#framebotones
+fondo_framebotones = 'goldenrod'
+color_fondo_boton = 'lemon chiffon'
+color_texto_boton = fondo_framebotones
+#framecampos
+color_fondo = 'lemon chiffon' # frame & labels
+color_letra = 'goldenrod' # labels
+
 #Boton Conectar
 bbddmenu.add_command(label='Conectar', command=conectar)
+# Botón Listado de alumnos
+bbddmenu.add_command(label = 'Listado de alumnos', command = listar)
 #Boton Salir
 bbddmenu.add_command(label='SALIR', command=salir)
 
@@ -185,7 +237,7 @@ fondo = 'lemon chiffon'
 color_fuente = 'goldenrod'
 framecampos = Frame(raiz) #Creación del Frame permite hacer los campos
 framecampos.config(bg=fondo)
-framecampos.pack() #Empaquetamiento del Frame ajusta el contenido a la ventana 
+framecampos.pack(fill='both') #Empaquetamiento del Frame ajusta el contenido a la ventana 
 
 # Variables de control para los Entry es lo qeu va a crear cada una de las 'categorias'
 legajo = StringVar()
@@ -223,6 +275,7 @@ grado_input.grid(row=4, column=2, padx=10, pady=10)
 #va a tener dos modalidades para actualizar, en donde yo voy a elegir y por otro lado 
 #cuando necesito buscar
 escuelas = buscar_escuela(False)
+escuela.set('Seleccione')
 escuela_option = OptionMenu(framecampos, escuela, *escuelas)
 escuela_option.grid(row=5, column=2, padx=10, pady=10)
 
@@ -282,7 +335,7 @@ w         e
 '''
 # FRAME BOTONERA -> Maneja las funciones CRUD (create, read, update, delete)
 framebotones = Frame(raiz)
-framebotones.pack()
+framebotones.pack(fill='both')
 
 boton_crear = Button(framebotones, text='Crear', command=crear)
 boton_crear.grid(row=0, column=1, padx=5, pady=10, ipadx=10)
@@ -298,7 +351,7 @@ boton_eliminar.grid(row=0, column=4, padx=5, pady=10, ipadx=10)
 
 # FRAME PIE
 framecopy = Frame(raiz)
-framecopy.pack()
+framecopy.pack(fill='both')
 copylabel = Label(framecopy, text='(2022) por Morena Caparrós para CaC 4.0 - Big Data')
 copylabel.grid(row=0, column=0, padx=10, pady=10)
 
